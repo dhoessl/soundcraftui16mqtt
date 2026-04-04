@@ -58,9 +58,8 @@ class DBConnection:
     def _setup_database(self) -> None:
 
         try:
-            # with open("/opt/mididatabase/init.sql", "r") as fp:
             with open(
-                resources.files("soundcraftui16_database.data")
+                resources.files("soundcraftui16mqtt_database.data")
                 .joinpath("init.sql"),
                 "r"
             ) as fp:
