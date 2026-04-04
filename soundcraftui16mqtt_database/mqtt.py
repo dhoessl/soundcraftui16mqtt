@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 from loguru import logger
-from json import loads, JSONDecodeError, dumps  # noqa: F401
 from os import path
 
 from . import DBConnection as DBC
@@ -14,155 +13,189 @@ class DatabaseMqttController(MqttClient):
     The moment a new value is set in the database it also gets send to clients
     listening for requests.
     """
-    def __init__(self, run_forever: bool = False) -> None:
+    def __init__(
+        self, run_forever: bool = False, host: str = "localhost",
+        port: int = 1883
+    ) -> None:
         super().__init__()
         self.runforever = run_forever
         self.db = DBC()
-        self.sub_topics = ["config", "database"]
+        self.listen_topics = ["config", "database_request"]
+        self.database_update_topic = "database_update"
 
     def _on_connect(self, client, userdata, flags, reason, prop) -> None:
-        for topic in self.sub_topics:
+        for topic in self.listen_topic:
             self.client.subscribe(f"{topic}/#")
-        logger.debug("Controller Client Connected")
+            logger.debug(f"Controller connected to {topic}/#")
 
     def _on_message(self, client, userdata, msg) -> None:
         topic = msg.topic
         decoded_msg = self._message_decoder(msg.payload.decode())
         if topic.startswith(self.sub_topics[0]):
-            if path.split(topic)[1] == "channel":
-                self.channel_update(path.split(topic)[0], decoded_msg)
-            elif path.split(topic)[1] == "fx":
-                self.fx_update(path.split(topic)[0], decoded_msg)
-            elif path.split(topic)[1] == "master":
+            command = path.split(topic)[1]
+            if command == "channel":
+                self.channel_update(decoded_msg)
+            elif command == "channel_fx":
+                self.channel_fx_update(decoded_msg)
+            elif command == "fx":
+                self.fx_update(decoded_msg)
+            elif command == "master":
                 self.master_update(decoded_msg)
-            elif path.split(topic)[1] == "bpm":
+            elif command == "bpm":
                 self.bpm_update(decoded_msg)
-            logger.debug(f"Update Config. Topic {topic} => {decoded_msg}")
-            return None
-        if topic.startswith(self.sub_topics[1]) and decoded_msg == "dbreq":
-            if path.split(topic)[1] == "channel":
-                self.publish_channel(path.split(topic)[0])
-            elif path.split(topic)[1] == "fx":
-                self.publish_fx(path.split(topic)[0])
-            elif path.split(topic)[1] == "master":
-                self.publish_master()
-            elif path.split(topic)[1] == "bpm":
-                self.publish_bpm()
-            logger.debug(f"Handling Request. Topic {topic} => {decoded_msg}")
-            return None
-        logger.debug(f"Unsolved msg: {topic} => {decoded_msg}")
+            else:
+                logger.debug(f"Unsolved: {topic} => {decoded_msg}")
+        elif topic.startswith(self.sub_topics[1]):
+            remaining_topic, command = path.split(topic)
+            requester = path.split(remaining_topic)[1]
+            if command == "channel":
+                self.publish_channel(decoded_msg, requester)
+            elif command == "channel_fx":
+                self.publish_channel_fx(decoded_msg, requester)
+            elif command == "fx":
+                self.publish_fx(decoded_msg, requester)
+            elif command == "master":
+                self.publish_master(requester)
+            elif command == "bpm":
+                self.publish_bpm(requester)
+            else:
+                logger.debug(f"Unsolved: {topic} => {decoded_msg}")
+        else:
+            logger.debug(f"Unsolved: {topic} => {decoded_msg}")
 
-    def master_update(self, msg: float) -> bool:
+    def master_update(self, msg: float) -> None:
         self.db.execute(
             "UPDATE misc SET value = :value WHERE parameter = 'master'",
-            {"value": float(msg)},
+            {
+                "value": float(msg)
+            },
             True
         )
-        return True
+        self.publish_master("all")
 
-    def publish_master(self) -> None:
+    def bpm_update(self, msg: float) -> None:
+        self.db.execute(
+            "UPDATE misc SET value = :value WHERE parameter = 'bpm'",
+            {
+                "value": float(msg)
+            },
+            True
+        )
+        self.publish_bpm("all")
+
+    def fx_update(self, msg: dict) -> None:
+        self.db.execute(
+            f"UPDATE fx SET {msg['param']} = :value WHERE id = :fx",
+            {
+                "value": float(msg["value"]),
+                "fx": msg["fx"]
+            },
+            True
+        )
+        self.publish_fx({"param": msg["param"], "fx": msg["fx"]}, "all")
+
+    def channel_update(self, msg: dict) -> None:
+        self.db.execute(
+            f"UPDATE channel SET {msg['param']} = :value "
+            "WHERE id = :channel",
+            {
+                "value": float(msg["value"]),
+                "channel": msg["channel"]
+            },
+            True
+        )
+        self.publish_channel(
+            {
+                "channel": msg["channel"],
+                "param": msg["param"]
+            },
+            "all"
+        )
+
+    def channel_fx_update(self, msg: dict) -> None:
+        self.db.execute(
+            f"UPDATE channel_fx SET {msg['param']} = :value "
+            "WHERE channel_id = :channel AND fx_id = :fx",
+            {
+                "value": float(msg["value"]),
+                "channel": msg["channel"],
+                "fx": msg["fx"]
+            },
+            True
+        )
+        self.publish_channel_fx(
+            {
+                "channel": msg["channel"],
+                "fx": msg["fx"],
+                "param": msg["param"]
+            },
+            "all"
+        )
+
+    def publish_master(self, requester: str) -> None:
         rows = self.db.execute(
             "SELECT value FROM misc WHERE parameter = 'master'"
         )
         self.client.publish(
-            path.join(self.sub_topics[1], "master"),
+            path.join(self.database_update_topic, requester, "master"),
             rows[0][0]
         )
 
-    def bpm_update(self, msg: float) -> bool:
-        self.db.execute(
-            "UPDATE misc SET value = :value WHERE parameter = 'bpm'",
-            {"value": float(msg)},
-            True
-        )
-        return True
-
-    def publish_bpm(self) -> None:
+    def publish_bpm(self, requester: str) -> None:
         rows = self.db.execute(
             "SELECT value FROM misc WHERE parameter = 'bpm'"
         )
         self.client.publish(
-            path.join(self.sub_topics[1], "bpm"),
+            path.join(self.database_update_topic, requester, "bpm"),
             rows[0][0]
         )
 
-    def fx_update(self, topic: str, msg: float) -> bool:
-        remaining_topic, fx = path.split(topic)
-        remaining_topic, par = path.split(remaining_topic)
-        self.db.execute(
-            f"UPDATE fx SET {par} = :value WHERE id = :fx",
-            {"value": float(msg), "fx": fx},
-            True
-        )
-        return True
-
-    def publish_fx(self, topic: str) -> None:
-        remaining_topic, fx = path.split(topic)
-        remaining_topic, par = path.split(remaining_topic)
+    def publish_fx(self, msg: dict, requester: str) -> None:
         rows = self.db.execute(
-            f"SELECT {par} FROM fx WHERE id = :fx",
-            {"fx": fx}
+            f"SELECT {msg['param']} FROM fx WHERE id = :fx",
+            {"fx": msg["fx"]}
         )
         self.client.publish(
-            path.join(self.sub_topics[1], par, fx, "fx"),
-            rows[0][0]
+            path.join(self.database_update_topic, requester, "fx"),
+            self._message_encode(
+                {
+                    "fx": msg["fx"],
+                    "param": msg["param"],
+                    "value": rows[0][0]
+                }
+            )
         )
 
-    def channel_update(self, topic: str, msg: float) -> bool:
-        remaining_topic, channel = path.split(topic)
-        remaining_topic, parameter = path.split(remaining_topic)
-        if parameter == "fx":
-            return self.channel_fx_update(int(channel), remaining_topic, msg)
-        self.db.execute(
-            f"UPDATE channel SET {parameter} = :value "
-            "WHERE id = :channel",
-            {"value": float(msg), "channel": channel},
-            True
-        )
-
-    def publish_channel(self, topic: str) -> None:
-        remaining_topic, channel = path.split(topic)
-        remaining_topic, parameter = path.split(remaining_topic)
-        if parameter == "fx":
-            self.publish_channel_fx(int(channel), remaining_topic)
-            return None
+    def publish_channel(self, msg: dict, requester: str) -> None:
         rows = self.db.execute(
-            f"SELECT {parameter} FROM channel WHERE id = :channel",
-            {"channel": channel}
+            f"SELECT {msg['param']} FROM channel WHERE id = :channel",
+            {"channel": msg["channel"]}
         )
         self.client.publish(
-            path.join(self.sub_topics[1], parameter, str(channel), "channel"),
-            rows[0][0]
+            path.join(self.database_update_topic, requester, "channel"),
+            self._message_encode(
+                {
+                    "channel": msg["channel"],
+                    "param": msg["param"],
+                    "value": rows[0][0]
+                }
+            )
         )
 
-    def channel_fx_update(self, channel: int, topic: str, msg: float) -> bool:
-        remaining_topic, fx = path.split(topic)
-        remaining_topic, parameter = path.split(remaining_topic)
-        self.db.execute(
-            f"UPDATE channel_fx SET {parameter} = :value "
+    def publish_channel_fx(self, msg: dict, requester: str) -> None:
+        rows = self.db.execute(
+            f"SELECT {msg['param']} FROM channel_fx "
             "WHERE channel_id = :channel AND fx_id = :fx",
-            {"value": float(msg), "channel": channel, "fx": fx},
-            True
-        )
-        return True
-
-    def publish_channel_fx(self, channel: int | str, topic: str) -> None:
-        remaining_topic, fx = path.split(topic)
-        remaining_topic, parameter = path.split(remaining_topic)
-        rows = self.db.execute(
-            f"SELECT {parameter} FROM channel_fx WHERE channel_id = :channel "
-            "AND fx_id = :fx",
-            {"channel": channel, "fx": fx}
+            {"channel": msg["channel"], "fx": msg["fx"]}
         )
         self.client.publish(
-            path.join(
-                self.sub_topics[1], parameter, str(fx), "fx", str(channel),
-                "channel"
-            ),
-            rows[0][0]
+            path.join(self.database_update_topic, requester, "channel_fx"),
+            self._message_encode(
+                {
+                    "channel": msg["channel"],
+                    "fx": msg["fx"],
+                    "param": msg["param"],
+                    "value": rows[0][0]
+                }
+            )
         )
-
-
-# if __name__ == "__main__":
-#     database_mqtt = DatabaseMqttClient()
-#     database_mqtt.start()
