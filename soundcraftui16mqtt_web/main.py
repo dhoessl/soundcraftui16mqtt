@@ -24,6 +24,10 @@ class WebApp():
         def index():
             return render_template("index.html")
 
+        @self.app.route("/status")
+        def status():
+            return render_template("status.html")
+
         @self.app.route("/favicon.ico")
         def favicon():
             return send_from_directory(

@@ -1,0 +1,18 @@
+{%- extends 'base.html' %}
+{%- block subtitle %}Status{% endblock %}
+{%- block head %}
+{{ super() }}
+{%- endblock %}
+{%- block scripts %}
+{{ super() }}
+    <script src="{{ url_for('static', filename='js/status.js') }}"></script>
+{%- endblock %}
+{%- block content %}
+<div id="flask_data" flask-data="{{ data | tojson }}"></div>
+<div class="container-fluid text-center">
+  <div class="row">
+    <div class="col">
+    </div>
+  </div>
+</div>
+{%- endblock -%}
