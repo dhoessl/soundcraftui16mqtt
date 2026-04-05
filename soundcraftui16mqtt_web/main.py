@@ -6,7 +6,7 @@ from uuid import uuid4
 
 
 class WebApp():
-    def __init__(self, name, root_path) -> None:
+    def __init__(self) -> None:
         service_path = path.join(
             resources.files("soundcraftui16mqtt_web"), "data"
         )
