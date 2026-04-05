@@ -11,7 +11,10 @@ class WebApp():
             resources.files("soundcraftui16mqtt_web"), "data"
         )
         path.split(path.abspath(__file__))[0]
-        self.app = Flask(name, root_path)
+        self.app = Flask(
+            __name__, root_path=service_path,
+            template_folder=path.join(service_path, "templates")
+        )
         self.app.config["SECRET_KEY"] = str(uuid4())
         self.app.config["APPLICATION_ROOT"] = service_path
         self.provide_paths()
@@ -27,3 +30,7 @@ class WebApp():
                 path.join(self.app.root_path, "static", "favicon"),
                 "favicon-96x96.ico", mimetype="image/vnd.microsoft.icon"
             )
+
+
+def get_webapp() -> Flask:
+    return WebApp().app

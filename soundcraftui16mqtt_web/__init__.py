@@ -1,1 +1,1 @@
-from .main import WebApp
+from .main import WebApp, get_webapp
