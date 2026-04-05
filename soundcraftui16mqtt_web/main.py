@@ -6,10 +6,10 @@ from uuid import uuid4
 
 
 class WebApp():
-    def __init__(self) -> None:
+    def __init__(self, name, root_path) -> None:
         service_path = resources.files("soundcraftui16mqtt_web.data")
         path.split(path.abspath(__file__))[0]
-        self.app = Flask(__name__, root_path=service_path)
+        self.app = Flask(name, root_path)
         self.app.config["SECRET_KEY"] = str(uuid4())
         self.app.config["APPLICATION_ROOT"] = service_path
         self.provide_paths()
