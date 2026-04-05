@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="soundcraftui16mqtt",
-    version="0.0.1-rc11",
+    version="0.0.1-rc12",
     description=(
         "library for soundcraft ui16 project including all modules for mqtt "
         "connection"
