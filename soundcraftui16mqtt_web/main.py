@@ -26,7 +26,13 @@ class WebApp():
 
         @self.app.route("/status")
         def status():
-            return render_template("status.html")
+            return render_template(
+                "status.html",
+                data={
+                    "mqtt_host": "192.168.2.99",
+                    "mqtt_port": 1883
+                }
+            )
 
         @self.app.route("/favicon.ico")
         def favicon():
