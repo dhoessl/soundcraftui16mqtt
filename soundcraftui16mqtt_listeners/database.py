@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 from loguru import logger
 from os import path
 
@@ -67,10 +65,12 @@ class DatabaseMqttListener(MqttClient):
     def req_channel_update(self, param: str, channel: int | str) -> None:
         self.client.publish(
             path.join(self.request_topic, self.id, "channel"),
-            {
-                "channel": str(channel),
-                "param": param
-            }
+            self._message_encode(
+                {
+                    "channel": str(channel),
+                    "param": param
+                }
+            )
         )
 
     def req_channel_fx_update(
@@ -78,20 +78,24 @@ class DatabaseMqttListener(MqttClient):
     ) -> None:
         self.client.publish(
             path.join(self.request_topic, self.id, "channel_fx"),
-            {
-                "channel": str(channel),
-                "fx": str(fx_id),
-                "param": param
-            }
+            self._message_encode(
+                {
+                    "channel": str(channel),
+                    "fx": str(fx_id),
+                    "param": param
+                }
+            )
         )
 
     def req_fx_update(self, param: str, fx_id: int | str) -> None:
         self.client.publish(
             path.join(self.request_topic, self.id, "fx"),
-            {
-                "fx": str(fx_id),
-                "param": param
-            }
+            self._message_encode(
+                {
+                    "fx": str(fx_id),
+                    "param": param
+                }
+            )
         )
 
     def req_master_update(self) -> None:

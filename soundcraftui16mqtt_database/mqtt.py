@@ -1,7 +1,6 @@
-#!/usr/bin/env python3
-
 from loguru import logger
 from os import path
+from re import match
 
 from . import DBConnection as DBC
 from soundcraftui16mqtt_mqtt import MqttClient
@@ -13,6 +12,10 @@ class DatabaseMqttController(MqttClient):
     The moment a new value is set in the database it also gets send to clients
     listening for requests.
     """
+    DENIED_OPTIONS = ["digitech", "deesser", "aux", "gate", "eq", "dyn"]
+    ALLOWED_INPUT_FUNCTIONS = ["mix", "mute", "solo", "gain"]
+    ALLOWED_FX_FUNCTIONS = ["mix", "mute"]
+
     def __init__(
         self, run_forever: bool = False, host: str = "localhost",
         port: int = 1883
@@ -33,16 +36,35 @@ class DatabaseMqttController(MqttClient):
         decoded_msg = self._message_decoder(msg.payload.decode())
         if topic.startswith(self.listen_topics[0]):
             command = path.split(topic)[1]
-            if command == "channel":
-                self.channel_update(decoded_msg)
-            elif command == "channel_fx":
-                self.channel_fx_update(decoded_msg)
-            elif command == "fx":
-                self.fx_update(decoded_msg)
+            if command not in ["master", "i", "f"]:
+                logger.debug(f"Skipped (command): {topic} => {decoded_msg}")
+            elif (
+                decoded_msg["option"] in msg
+                and msg["option"] in self.DENIED_OPTIONS
+            ):
+                logger.debug(f"Skipped (option): {topic} => {decoded_msg}")
             elif command == "master":
-                self.master_update(decoded_msg)
-            elif command == "bpm":
-                self.bpm_update(decoded_msg)
+                self.master_update(decoded_msg["value"])
+            elif command == "f" and decoded_msg["function"] == "bpm":
+                self.bpm_update(decoded_msg["value"])
+            elif (
+                command == "i" and "channel" in msg
+                and "option" in msg and msg["option"] == "fx"
+            ):
+                self.channel_fx_update(decoded_msg)
+            elif (
+                command == "i" and "channel" in msg and "function" in msg
+                and msg["function"] in self.ALLOWED_INPUT_FUNCTIONS
+            ):
+                self.channel_update(decoded_msg)
+            elif (
+                command == "f" and "function" in msg
+                and (
+                    msg["function"] in self.ALLOWED_FX_FUNCTIONS
+                    or match(r"^par\d$", msg["function"])
+                )
+            ):
+                self.fx_update(decoded_msg)
             else:
                 logger.debug(f"Unsolved: {topic} => {decoded_msg}")
         elif topic.startswith(self.listen_topics[1]):
@@ -63,7 +85,7 @@ class DatabaseMqttController(MqttClient):
         else:
             logger.debug(f"Unsolved: {topic} => {decoded_msg}")
 
-    def master_update(self, msg: float) -> None:
+    def master_update(self, msg: str | float) -> None:
         self.db.execute(
             "UPDATE misc SET value = :value WHERE parameter = 'master'",
             {
@@ -73,7 +95,7 @@ class DatabaseMqttController(MqttClient):
         )
         self.publish_master("all")
 
-    def bpm_update(self, msg: float) -> None:
+    def bpm_update(self, msg: str | float) -> None:
         self.db.execute(
             "UPDATE misc SET value = :value WHERE parameter = 'bpm'",
             {
@@ -85,18 +107,24 @@ class DatabaseMqttController(MqttClient):
 
     def fx_update(self, msg: dict) -> None:
         self.db.execute(
-            f"UPDATE fx SET {msg['param']} = :value WHERE id = :fx",
+            f"UPDATE fx SET {msg['function']} = :value WHERE id = :fx",
             {
                 "value": float(msg["value"]),
-                "fx": msg["fx"]
+                "fx": msg["channel"]
             },
             True
         )
-        self.publish_fx({"param": msg["param"], "fx": msg["fx"]}, "all")
+        self.publish_fx(
+            {
+                "param": msg["function"],
+                "fx": msg["channel"]
+            },
+            "all"
+        )
 
     def channel_update(self, msg: dict) -> None:
         self.db.execute(
-            f"UPDATE channel SET {msg['param']} = :value "
+            f"UPDATE channel SET {msg['function']} = :value "
             "WHERE id = :channel",
             {
                 "value": float(msg["value"]),
@@ -107,27 +135,27 @@ class DatabaseMqttController(MqttClient):
         self.publish_channel(
             {
                 "channel": msg["channel"],
-                "param": msg["param"]
+                "param": msg["function"]
             },
             "all"
         )
 
     def channel_fx_update(self, msg: dict) -> None:
         self.db.execute(
-            f"UPDATE channel_fx SET {msg['param']} = :value "
+            f"UPDATE channel_fx SET {msg['function']} = :value "
             "WHERE channel_id = :channel AND fx_id = :fx",
             {
                 "value": float(msg["value"]),
                 "channel": msg["channel"],
-                "fx": msg["fx"]
+                "fx": msg["option_channel"]
             },
             True
         )
         self.publish_channel_fx(
             {
                 "channel": msg["channel"],
-                "fx": msg["fx"],
-                "param": msg["param"]
+                "fx": msg["option_channel"],
+                "param": msg["function"]
             },
             "all"
         )
