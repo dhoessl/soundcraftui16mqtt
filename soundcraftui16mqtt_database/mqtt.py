@@ -24,14 +24,14 @@ class DatabaseMqttController(MqttClient):
         self.database_update_topic = "database_update"
 
     def _on_connect(self, client, userdata, flags, reason, prop) -> None:
-        for topic in self.listen_topic:
+        for topic in self.listen_topics:
             self.client.subscribe(f"{topic}/#")
             logger.debug(f"Controller connected to {topic}/#")
 
     def _on_message(self, client, userdata, msg) -> None:
         topic = msg.topic
         decoded_msg = self._message_decoder(msg.payload.decode())
-        if topic.startswith(self.sub_topics[0]):
+        if topic.startswith(self.listen_topics[0]):
             command = path.split(topic)[1]
             if command == "channel":
                 self.channel_update(decoded_msg)
@@ -45,7 +45,7 @@ class DatabaseMqttController(MqttClient):
                 self.bpm_update(decoded_msg)
             else:
                 logger.debug(f"Unsolved: {topic} => {decoded_msg}")
-        elif topic.startswith(self.sub_topics[1]):
+        elif topic.startswith(self.listen_topics[1]):
             remaining_topic, command = path.split(topic)
             requester = path.split(remaining_topic)[1]
             if command == "channel":
