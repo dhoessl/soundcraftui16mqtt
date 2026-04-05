@@ -13,7 +13,8 @@ setup(
     license="GPL-v3",
     packages=find_packages(),
     package_data={
-        "soundcraftui16mqtt_database": ["data/*.sql"]
+        "soundcraftui16mqtt_database": ["data/*.sql"],
+        "soundcraftui16mqtt_web": ["data/*"]
     },
     include_package_data=True,
     install_requires=["loguru", "paho-mqtt", "flask", "gunicorn"],
