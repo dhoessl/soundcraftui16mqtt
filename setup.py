@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="soundcraftui16mqtt",
-    version="0.0.1-rc6",
+    version="0.0.1-rc7",
     description=(
         "library for soundcraft ui16 project including all modules for mqtt "
         "connection"
@@ -14,7 +14,7 @@ setup(
     packages=find_packages(),
     package_data={
         "soundcraftui16mqtt_database": ["data/*.sql"],
-        "soundcraftui16mqtt_web": ["data/*"]
+        "soundcraftui16mqtt_web": ["data/static/*", "data/templates/*"]
     },
     include_package_data=True,
     install_requires=["loguru", "paho-mqtt", "flask", "gunicorn"],
