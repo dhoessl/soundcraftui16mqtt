@@ -34,4 +34,4 @@ window.addEventListener("load", function(){
 
   // connect the client
   client.connect({onSuccess:onConnect});
-}
+});
