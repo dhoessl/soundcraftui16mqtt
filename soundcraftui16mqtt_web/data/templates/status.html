@@ -4,8 +4,8 @@
 {{ super() }}
 {%- endblock %}
 {%- block scripts %}
+<script src="{{ url_for('static', filename='js/status.js') }}"></script>
 {{ super() }}
-    <script src="{{ url_for('static', filename='js/status.js') }}"></script>
 {%- endblock %}
 {%- block content %}
 <div id="mqtt_data" host="{{ data['mqtt_host'] }}" port="{{ data['mqtt_port'] }}"></div>

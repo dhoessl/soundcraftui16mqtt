@@ -24,7 +24,13 @@ class WebApp():
     def provide_paths(self) -> None:
         @self.app.route("/")
         def index():
-            return render_template("index.html")
+            return render_template(
+                "index.html",
+                data={
+                    "mqtt_host": self.mqtt_host,
+                    "mqtt_port": self.mqtt_port
+                }
+            )
 
         @self.app.route("/status")
         def status():
