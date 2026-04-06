@@ -50,6 +50,7 @@ class MixerListener(MixerBase):
                     self._send_message(message)
 
     def _send_message(self, message) -> None:
+        logger.debug(message)
         _, body, value = message.split('^')
         body_list = body.split('.')
         if body_list[0] == "var":
