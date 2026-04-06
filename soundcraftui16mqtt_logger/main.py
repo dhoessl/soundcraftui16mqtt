@@ -20,8 +20,8 @@ def define_logger(debug: bool = False, to_file: bool = False) -> None:
         logger.add(
             "/opt/soundcraftui16mqtt_log/default.log",
             format=(
-                "{time:YYYY-MM-DD HH:mm:ss} {level: <8} "
-                "{name}:{function} {message}"
+                "{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | "
+                "{name}:{function} | {message}"
             ),
             level="DEBUG",
             colorize=False
