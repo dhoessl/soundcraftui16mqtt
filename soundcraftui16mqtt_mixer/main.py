@@ -18,7 +18,7 @@ class MixerBase:
         )
         self.alive_timeout = 5
         self.recv_thread = Thread(
-            target=self._recv_thead,
+            target=self._recv_thread,
             args=()
         )
         self.connected = False
