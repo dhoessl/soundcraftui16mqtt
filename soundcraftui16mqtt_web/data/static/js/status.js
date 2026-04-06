@@ -1,6 +1,6 @@
 function send_message(msg, topic){
   var message = new Paho.Message(msg);
-  message.destionationName = "database_request/" + window.mqtt_client.clientId + "/" + topic;
+  message.destinationName = "database_request/" + window.mqtt_client.clientId + "/" + topic;
   window.mqtt_client.send(message);
 }
 
@@ -20,7 +20,7 @@ function onConnectionLost(responseObject) {
   $("#btn-mqtt").removeClass("btn-success").addClass("btn-danger");
 }
 function onMessageArrived(message) {
-  console.log("Message arrived on topic " + message.destionationName + " with content " + message.payloadString);
+  console.log("Message arrived on topic " + message.destinationName + " with content " + message.payloadString);
 }
 
 window.addEventListener("load", function(){
