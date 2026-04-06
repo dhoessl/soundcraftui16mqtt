@@ -6,7 +6,9 @@ from uuid import uuid4
 
 
 class WebApp():
-    def __init__(self) -> None:
+    def __init__(self, mqtt_host: str = None, mqtt_port: int = None) -> None:
+        self.mqtt_host = mqtt_host
+        self.mqtt_port = mqtt_port
         service_path = path.join(
             resources.files("soundcraftui16mqtt_web"), "data"
         )
@@ -29,8 +31,8 @@ class WebApp():
             return render_template(
                 "status.html",
                 data={
-                    "mqtt_host": "192.168.2.99",
-                    "mqtt_port": 1883
+                    "mqtt_host": self.mqtt_host,
+                    "mqtt_port": self.mqtt_port
                 }
             )
 
@@ -42,5 +44,5 @@ class WebApp():
             )
 
 
-def get_webapp() -> Flask:
-    return WebApp().app
+def get_webapp(mqtt_host: str = None, mqtt_port: int = None) -> Flask:
+    return WebApp(mqtt_host, mqtt_port).app
