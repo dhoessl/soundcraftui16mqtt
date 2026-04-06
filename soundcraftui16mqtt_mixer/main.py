@@ -7,7 +7,7 @@ from loguru import logger
 class MixerBase:
     def __init__(self, ip: str, port: int) -> None:
         self.ip = ip
-        self.port = port
+        self.port = int(port)
         self.connection_timeout = 5
         self.connect_retry = 30
         self.client = None
@@ -37,9 +37,11 @@ class MixerBase:
         except socket.timeout:
             logger.error("Timeout while sending alive")
             self.connected = False
+            return None
         except ConnectionResetError:
             logger.critical("Connection was reset by mixer")
             self.exit.set()
+            return None
 
     def _recv_thread(self) -> None:
         """ Basic Thread to sink messages. This is required to keep connection
