@@ -1,28 +1,3 @@
-function send_message(msg, topic){
-  var message = new Paho.Message(msg);
-  message.destionationName = "database_request/" + client.clientId + "/" + topic;
-  client.send(message);
-}
-
-function onConnect() {
-  // Once a connection has been made, make a subscription and send a message.
-  client.subscribe("database_update/all/#");
-  client.subscribe("database_update/" + client.clientId + "/#");
-  client.subscribe("webpage/#");
-  console.log("Mqtt Client connected");
-  // TODO: Update UI
-}
-
-function onConnectionLost(responseObject) {
-  if (responseObject.errorCode !== 0) {
-    console.log("onConnectionLost:"+responseObject.errorMessage);
-  }
-  // TODO: Update some Elements in the UI
-}
-function onMessageArrived(message) {
-  console.log("onMessageArrived:"+message.payloadString);
-}
-
 window.addEventListener("load", function(){
   broker_host = $("#mqtt_data").attr("host");
   broker_port = $("#mqtt_data").attr("port");
@@ -35,3 +10,29 @@ window.addEventListener("load", function(){
   // connect the client
   client.connect({onSuccess:onConnect});
 });
+
+function send_message(msg, topic){
+  var message = new Paho.Message(msg);
+  message.destionationName = "database_request/" + client.clientId + "/" + topic;
+  client.send(message);
+}
+
+function onConnect() {
+  // Once a connection has been made, make a subscription and send a message.
+  client.subscribe("database_update/all/#");
+  client.subscribe("database_update/" + client.clientId + "/#");
+  client.subscribe("webpage/#");
+  console.log("Mqtt Client connected");
+  $("#btn-mqtt").removeClass("btn-danger").addClass("btn-success");
+}
+
+function onConnectionLost(responseObject) {
+  if (responseObject.errorCode !== 0) {
+    console.log("onConnectionLost:"+responseObject.errorMessage);
+  }
+  $("#btn-mqtt").removeClass("btn-success").addClass("btn-danger");
+}
+function onMessageArrived(message) {
+  console.log("Message arrived on topic " + message.destionationName + " with content " + message.payloadString);
+}
+
