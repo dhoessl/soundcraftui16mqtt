@@ -22,6 +22,8 @@ class MixerListener(MixerBase):
         self.connect()
         if self.connected:
             logger.debug("Listener to Soundcraft ui16 connected")
+            self.mqtt_client.send_endpoint(self.ip, self.port)
+            self.mqtt_client.send_status(True)
         else:
             self.logger.critical("Soundcraft Listener could not connect")
             raise RuntimeError("Soundcraft Listener could not connect")
@@ -48,6 +50,7 @@ class MixerListener(MixerBase):
                 if "SETD" in message:
                     # Send message using mqtt
                     self._send_message(message)
+        self.mqtt_client.send_status(False)
 
     def _send_message(self, message) -> None:
         logger.debug(message)
