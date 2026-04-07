@@ -2,6 +2,8 @@
 
 This is a library to create a connection between soundcraft ui16 and some information consumer and producer using a mqtt server as message bus for all components.
 
+# Example
+## Basic
 The simplest configuration would be:
 ```
 from soundcraftui16mqtt_database import DatabaseMqttController
@@ -27,5 +29,16 @@ This will be read by the controller and information will be stored in the databa
 
 listener clients can now request updates on topic `database_request/{client_id}/#` and will be served with data from database on topic `database_update/{client_id or all}/#`.
 
-## Communication idea
+## Webpage
+Webapp can be started using gunicorn to deploy the flask server.
+```
+interface_ip="127.0.0.1"
+web_port=5000
+mqtt_host="localhost"
+mqtt_port=9001 # websocket mqtt port for js mqtt client
+
+gunicorn -w 1 -b $interface_ip:$web_port 'soundcraftui16mqtt_web:get_webapp("{mqtt_host}", {mqtt_port})'
+```
+
+# Communication idea
 [![Image](docs/idea.png)](docs/idea.png)
