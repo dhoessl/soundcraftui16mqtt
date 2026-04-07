@@ -25,7 +25,7 @@ class DatabaseMqttController(MqttClient):
         self.db = DBC()
         self.listen_topics = [
             "config", "database_request", "status_request", "status_report",
-            "endpoint_request", "endpoint_update"
+            "endpoint_request", "endpoint_report"
         ]
         self.database_update_topic = "database_update"
         self.status_update_topic = "status_update"
