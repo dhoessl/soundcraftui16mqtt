@@ -56,7 +56,6 @@ class DBConnection:
         return rows
 
     def _setup_database(self) -> None:
-
         try:
             with open(
                 resources.files("soundcraftui16mqtt_database.data")
@@ -115,4 +114,27 @@ class DBConnection:
                 "INSERT INTO fx (id) SELECT :fx "
                 "WHERE NOT EXISTS (SELECT 1 FROM fx WHERE id = :fx)",
                 {"fx": fx}, True
+            )
+        for entity in ["mixer", "apc", "midimix"]:
+            self.execute(
+                "INSERT INTO status (name) "
+                "SELECT :name "
+                "WHERE NOT EXISTS (SELECT 1 FROM status WHERE name = :name)",
+                {"name": entity},
+                True
+            )
+        entities = [
+            {"name": "mixer", "address": "10.10.2.1", "port": 80}
+        ]
+        for entity in entities:
+            self.execute(
+                "INSERT INTO entity_config(name, address, port) "
+                "SELECT :name, :address, :port"
+                "WHERE NOT EXISTS (SELECT 1 FROM mixer WHERE name = :name)",
+                {
+                    "name": entity["name"],
+                    "address": entity["address"],
+                    "port": entity["port"]
+                },
+                True
             )

@@ -23,8 +23,13 @@ class DatabaseMqttController(MqttClient):
         super().__init__()
         self.runforever = run_forever
         self.db = DBC()
-        self.listen_topics = ["config", "database_request"]
+        self.listen_topics = [
+            "config", "database_request", "status_request", "status_report",
+            "endpoint_request", "endpoint_update"
+        ]
         self.database_update_topic = "database_update"
+        self.status_update_topic = "status_update"
+        self.endpoint_update_topic = "endpoint_update"
 
     def _on_connect(self, client, userdata, flags, reason, prop) -> None:
         for topic in self.listen_topics:
@@ -82,6 +87,14 @@ class DatabaseMqttController(MqttClient):
                 self.publish_bpm(requester)
             else:
                 logger.debug(f"Unsolved: {topic} => {decoded_msg}")
+        elif topic.startswith(self.listen_topics[2]):
+            self.publish_status(path.split(topic)[1])
+        elif topic.startswith(self.listen_topics[3]):
+            self.update_status(decoded_msg)
+        elif topic.startswith(self.listen_topics[4]):
+            self.publish_endpoints(path.split(topic)[1])
+        elif topic.startswith(self.listen_topics[5]):
+            self.update_endpoints(decoded_msg)
         else:
             logger.debug(f"Unsolved: {topic} => {decoded_msg}")
 
@@ -226,4 +239,53 @@ class DatabaseMqttController(MqttClient):
                     "value": rows[0][0]
                 }
             )
+        )
+
+    def update_status(self, data: dict) -> None:
+        if (
+            "state" not in data
+            or data["state"] not in [True, False, 1, 0]
+        ):
+            return None
+        self.db.execute(
+            "UPDATE status SET state = :state WHERE name = :name",
+            {"state": int(data["state"]), "name": data["name"]},
+            True
+        )
+        self.publish_status("all")
+
+    def publish_status(self, requester: str) -> None:
+        rows = self.db.execute("SELECT name, state FROM status")
+        status_dict = {}
+        for row in rows:
+            status_dict[row[0]] = row[1]
+        self.client.publish(
+            path.join(self.status_update_topic, requester),
+            self._message_encode(status_dict)
+        )
+
+    def update_endpoints(self, data: dict) -> None:
+        self.db.execute(
+            "UPDATE entity_config SET address = :address, port = :port "
+            "WHERE name = :name",
+            {
+                "name": data["name"],
+                "address": data["address"],
+                "port": data["port"]
+            },
+            True
+        )
+        self.publish_endpoints("all")
+
+    def publish_endpoints(self, requester: str) -> None:
+        rows = self.db.execute("SELECT name, address, port FROM entity_config")
+        endpoints = {}
+        for row in rows:
+            endpoints[row[0]] = {
+                "address": row[1],
+                "port": row[2]
+            }
+        self.client.publish(
+            path.join(self.endpoint_update_topic, requester),
+            self._message_encode(endpoints)
         )

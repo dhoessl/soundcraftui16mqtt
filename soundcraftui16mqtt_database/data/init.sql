@@ -29,3 +29,16 @@ CREATE TABLE IF NOT EXISTS fx(
   par5 REAL DEFAULT 0,
   par6 REAL DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS status(
+  id integer PRIMARY KEY,
+  name TEXT NOT NULL,
+  state integer DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS entity_config(
+  id integer PRIMARY KEY,
+  name TXT NOT NULL,
+  address TEXT NOT NULL,
+  port int NOT NULL
+);
