@@ -11,7 +11,7 @@ setup(
     author="Dominic Hößl",
     author_email="dhoessl@dhoessl.de",
     license="GPL-v3",
-    packages=find_packages(),
+    packages=find_packages(exclude=["docs", "docs.*"]),
     package_data={
         "soundcraftui16mqtt_database": ["data/*.sql"],
         "soundcraftui16mqtt_web": [
