@@ -37,11 +37,9 @@ class MixerBase:
         except socket.timeout:
             logger.error("Timeout while sending alive")
             self.connected = False
-            return None
         except ConnectionResetError:
             logger.critical("Connection was reset by mixer")
             self.exit.set()
-            return None
 
     def _recv_thread(self) -> None:
         """ Basic Thread to sink messages. This is required to keep connection
