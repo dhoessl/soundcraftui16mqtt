@@ -11,19 +11,46 @@
 <div id="mqtt_data" host="{{ data['mqtt_host'] }}" port="{{ data['mqtt_port'] }}"></div>
 <div class="container-fluid text-center">
   <div class="row">
-    <div class="col">
+    <div class="col" color="white">
       <h1>Status</h1>
     </div>
   </div>
   <div class="row">
-    <div class="col">
-      <button type="button" class="btn btn-danger" id="btn-mqtt">MQTT</button>
+    <div class="col mx-2">
+      <button type="button" class="btn btn-danger" id="btn-mqtt" style="width: 7rem;">MQTT</button>
+      <table class="table-dark mt-3">
+        <tbody>
+          <tr>
+            <th style="width: 50%">Address</th>
+            <td>{{ data['mqtt_host'] }}</td>
+          </tr>
+          <tr>
+            <th style="width: 50%">Port</th>
+            <td>{{ data['mqtt_port'] }}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
-    <div class="col">
+    <div class="col mx-2">
+      <button type="button" class="btn btn-danger" id="btn-mixer" style="width: 7rem;">Mixer Listener</button>
+      <table class="table-dark mt-3">
+        <tbody>
+          <tr>
+            <th style="width: 50%">Address</th>
+            <td id="mixer_address">N/A</td>
+          </tr>
+          <tr>
+            <th style="width: 50%">Port</th>
+            <td id="mixer_port">80</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
-    <div class="col">
+    <div class="col mx-2">
+      <button type="button" class="btn btn-danger" id="btn-apcmk2" style="width: 7rem;">APC MK2</button>
     </div>
-    <div class="col">
+    <div class="col mx-2">
+      <button type="button" class="btn btn-danger" id="btn-midimix" style="width: 7rem;">MidiMix</button>
     </div>
   </div>
 </div>
