@@ -5,8 +5,11 @@ from loguru import logger
 
 
 class DBConnection:
-    def __init__(self, path: str = "/opt/mididatabase/config.db") -> None:
-        self.location = path
+    def __init__(
+        self,
+        location: str = "/opt/soundcraftui16mqtt/database/config.db"
+    ) -> None:
+        self.location = location
         self._create_location()
         self.connection = None
         self.connect()

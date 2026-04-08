@@ -6,7 +6,7 @@ from os import path
 def define_logger(
     loglevel: str = "INFO",
     to_file: bool = False,
-    logfile: str = "/opt/soundcraftui16mqtt_log/default.log"
+    logfile: str = "/opt/soundcraftui16mqtt/log/default.log"
 ) -> None:
     allowed_levels = [
         "TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL"
