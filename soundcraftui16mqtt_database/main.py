@@ -133,7 +133,7 @@ class DBConnection:
             self.execute(
                 "INSERT INTO entity_config(name, address, port) "
                 "SELECT :name, :address, :port "
-                "WHERE NOT EXISTS (SELECT 1 FROM mixer WHERE name = :name)",
+                "WHERE NOT EXISTS (SELECT 1 FROM entity_config WHERE name = :name)",
                 {
                     "name": entity["name"],
                     "address": entity["address"],
