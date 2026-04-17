@@ -44,13 +44,18 @@ class DatabaseMqttController(MqttClient):
             if command not in ["master", "i", "f"]:
                 logger.debug(f"Skipped (command): {topic} => {decoded_msg}")
             elif (
-                decoded_msg["option"] in msg
+                "option" in decoded_msg
+                and decoded_msg["option"] in msg
                 and msg["option"] in self.DENIED_OPTIONS
             ):
                 logger.debug(f"Skipped (option): {topic} => {decoded_msg}")
             elif command == "master":
                 self.master_update(decoded_msg["value"])
-            elif command == "f" and decoded_msg["function"] == "bpm":
+            elif (
+                command == "f" 
+                and "function" in decoded_msg
+                and decoded_msg["function"] == "bpm"
+            ):
                 self.bpm_update(decoded_msg["value"])
             elif (
                 command == "i" and "channel" in msg
