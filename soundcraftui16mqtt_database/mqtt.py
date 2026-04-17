@@ -52,26 +52,27 @@ class DatabaseMqttController(MqttClient):
             elif command == "master":
                 self.master_update(decoded_msg["value"])
             elif (
-                command == "f" 
+                command == "f"
                 and "function" in decoded_msg
                 and decoded_msg["function"] == "bpm"
             ):
                 self.bpm_update(decoded_msg["value"])
             elif (
-                command == "i" and "channel" in msg
-                and "option" in msg and msg["option"] == "fx"
+                command == "i" and "channel" in decoded_msg
+                and "option" in decoded_msg and decoded_msg["option"] == "fx"
             ):
                 self.channel_fx_update(decoded_msg)
             elif (
-                command == "i" and "channel" in msg and "function" in msg
-                and msg["function"] in self.ALLOWED_INPUT_FUNCTIONS
+                command == "i" and "channel" in decoded_msg
+                and "function" in decoded_msg
+                and decoded_msg["function"] in self.ALLOWED_INPUT_FUNCTIONS
             ):
                 self.channel_update(decoded_msg)
             elif (
-                command == "f" and "function" in msg
+                command == "f" and "function" in decoded_msg
                 and (
-                    msg["function"] in self.ALLOWED_FX_FUNCTIONS
-                    or match(r"^par\d$", msg["function"])
+                    decoded_msg["function"] in self.ALLOWED_FX_FUNCTIONS
+                    or match(r"^par\d$", decoded_msg["function"])
                 )
             ):
                 self.fx_update(decoded_msg)
