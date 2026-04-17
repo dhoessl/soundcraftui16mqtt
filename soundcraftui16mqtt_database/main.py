@@ -127,12 +127,12 @@ class DBConnection:
                 True
             )
         entities = [
-            {"name": "mixer", "address": "10.10.2.1", "port": 80}
+            {"name": "mixer", "address": "10.10.1.1", "port": 80}
         ]
         for entity in entities:
             self.execute(
                 "INSERT INTO entity_config(name, address, port) "
-                "SELECT :name, :address, :port"
+                "SELECT :name, :address, :port "
                 "WHERE NOT EXISTS (SELECT 1 FROM mixer WHERE name = :name)",
                 {
                     "name": entity["name"],
