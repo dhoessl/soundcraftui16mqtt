@@ -45,8 +45,8 @@ class DatabaseMqttController(MqttClient):
                 logger.debug(f"Skipped (command): {topic} => {decoded_msg}")
             elif (
                 "option" in decoded_msg
-                and decoded_msg["option"] in msg
-                and msg["option"] in self.DENIED_OPTIONS
+                and "option" in decoded_msg
+                and decoded_msg["option"] in self.DENIED_OPTIONS
             ):
                 logger.debug(f"Skipped (option): {topic} => {decoded_msg}")
             elif command == "master":
