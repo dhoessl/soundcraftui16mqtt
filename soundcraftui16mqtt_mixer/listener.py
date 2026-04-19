@@ -50,6 +50,10 @@ class MixerListener(MixerBase):
                 if "SETD" in message:
                     # Send message using mqtt
                     self._send_message(message)
+                elif message.startswith("VU"):
+                    logger.info("Possible VU Meter message! {message}")
+                else:
+                    logger.debug("SKIP LISTENER MESSAGE: {message}")
         self.mqtt_client.send_status(False)
 
     def _send_message(self, message) -> None:
