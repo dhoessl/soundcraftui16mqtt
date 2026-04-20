@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="soundcraftui16mqtt",
-    version="0.0.2-rc0",
+    version="0.0.2-rc1",
     description=(
         "library for soundcraft ui16 project including all modules for mqtt "
         "connection"
@@ -14,6 +14,7 @@ setup(
     packages=find_packages(exclude=["docs", "docs.*"]),
     package_data={
         "soundcraftui16mqtt_database": ["data/*.sql"],
+        "soundcraftui16mqtt_mixer": ["data/*.txt"],
         "soundcraftui16mqtt_web": [
             "data/static/css/*",
             "data/static/favicon/*.ico",

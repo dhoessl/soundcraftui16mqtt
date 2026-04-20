@@ -1,4 +1,4 @@
-from socket import socket, AF_INET, SOCK_STREAM
+from socket import socket, AF_INET, SOCK_STREAM, timeout
 from threading import Thread, Event
 from time import sleep
 from loguru import logger
@@ -34,18 +34,24 @@ class MixerBase:
         """ Sends alive Message to Mixer to keep connection open """
         try:
             self.client.send(b"ALIVE\n")
-        except socket.timeout:
+        except timeout:
             logger.error("Timeout while sending alive")
             self.connected = False
         except ConnectionResetError:
             logger.critical("Connection was reset by mixer")
+            self.exit.set()
+        except BrokenPipeError:
+            logger.critical("Something caused a broken pipe")
             self.exit.set()
 
     def _recv_thread(self) -> None:
         """ Basic Thread to sink messages. This is required to keep connection
         alive """
         while not self.exit.is_set():
-            _ = self.client.recv(512).decode()
+            try:
+                _ = self.client.recv(512).decode()
+            except TimeoutError:
+                logger.warning("Timeout on receiving!")
 
     def connect(self) -> bool:
         if self.exit.is_set():

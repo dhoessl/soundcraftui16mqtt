@@ -36,7 +36,15 @@ class MixerListener(MixerBase):
         buffer = ""
         while not self.exit.is_set():
             # save new data to buffer
-            buffer += self.client.recv(2048).decode()
+            try:
+                buffer += self.client.recv(2048).decode()
+            except TimeoutError:
+                if self.exit.is_set():
+                    continue
+                self.warning("Timeout on receiving - Mixer dead?")
+                self.mqtt_client.send_status(False)
+                self.exit.set()
+                continue
             if "\n" not in buffer:
                 # If no message delimiter is found wait for new messages
                 continue
@@ -51,16 +59,33 @@ class MixerListener(MixerBase):
                     # Send message using mqtt
                     self._send_message(message)
                 elif message.startswith("VU"):
-                    logger.info("Possible VU Meter message! {message}")
+                    logger.info(f"Possible VU Meter message! {message}")
                 else:
-                    logger.debug("SKIP LISTENER MESSAGE: {message}")
-        self.mqtt_client.send_status(False)
+                    logger.debug(f"SKIP LISTENER MESSAGE: {message}")
 
     def _send_message(self, message) -> None:
         logger.debug(message)
         _, body, value = message.split('^')
         body_list = body.split('.')
         if body_list[0] == "var":
+            if body_list[1] == "spiec":
+                # Possibly the error-clear count
+                return None
+            elif body_list[1] == "spioa":
+                # Some sort of oa counter for the spi board
+                return None
+            elif body_list[1] == "spimb":
+                # possible message buffer value (8192)
+                return None
+            elif body_list[1] == "spien":
+                # spi interface enabled
+                return None
+            elif body_list[1] == "spior":
+                # no clue - maybe offset of some sort
+                return None
+            elif body_list[1] == "spids":
+                # possibly data source or dual mode
+                return None
             self.mqtt_client.publish(
                 "var",
                 {
@@ -84,6 +109,9 @@ class MixerListener(MixerBase):
                     "value": value
                 }
             )
+        elif body_list[0] == "settings" or body_list[0] == "mgmask":
+            # One could send these messages but currently not needed
+            return None
         elif len(body_list) == 3:
             self.mqtt_client.publish(
                 body_list[0],
