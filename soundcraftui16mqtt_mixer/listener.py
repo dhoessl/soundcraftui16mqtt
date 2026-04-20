@@ -3,6 +3,7 @@ from .mqtt import MixerMqttSender
 
 from threading import Thread
 from loguru import logger
+from base64 import b64decode
 
 
 class MixerListener(MixerBase):
@@ -34,6 +35,7 @@ class MixerListener(MixerBase):
 
     def _recv_thread(self) -> None:
         buffer = ""
+        factor = 0.004167508166392142
         while not self.exit.is_set():
             # save new data to buffer
             try:
@@ -58,8 +60,16 @@ class MixerListener(MixerBase):
                 if "SETD" in message:
                     # Send message using mqtt
                     self._send_message(message)
-                elif message.startswith("VU"):
+                elif message.startswith("VU2"):
                     logger.info(f"Possible VU Meter message! {message}")
+                    body = message.split("^")[1][4:]
+                    numbers = []
+                    for num in b64decode(body):
+                        numbers.append(num * factor)
+                    out_str = " ".join(numbers)
+                    logger.info(f"{out_str}")
+                elif message.startswith("RTA"):
+                    continue
                 else:
                     logger.debug(f"SKIP LISTENER MESSAGE: {message}")
 
