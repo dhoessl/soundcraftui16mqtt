@@ -1,5 +1,6 @@
 from .main import MixerBase
 from .mqtt import MixerMqttSender
+from .vu import VUData
 
 from threading import Thread
 from loguru import logger
@@ -35,7 +36,7 @@ class MixerListener(MixerBase):
 
     def _recv_thread(self) -> None:
         buffer = ""
-        factor = 0.004167508166392142
+        # factor = 0.004167508166392142
         while not self.exit.is_set():
             # save new data to buffer
             try:
@@ -61,21 +62,23 @@ class MixerListener(MixerBase):
                     # Send message using mqtt
                     self._send_message(message)
                 elif message.startswith("VU2"):
-                    logger.info(f"Possible VU Meter message! {message}")
-                    body = message.split("^")[1][4:]
-                    numbers = []
+                    body = message.split('^')[1]
+                    numbers = ""
                     for num in b64decode(body):
-                        numbers.append(num * factor)
-                    out_str = " ".join(numbers)
-                    logger.info(f"{out_str}")
+                        numbers += f"{num} "
+                    logger.info(f"{numbers[:-1]}")
                 elif message.startswith("RTA"):
+                    # Skip RTA for now since i can not decoded them
                     continue
                 else:
                     logger.debug(f"SKIP LISTENER MESSAGE: {message}")
 
     def _send_message(self, message) -> None:
         logger.debug(message)
-        _, body, value = message.split('^')
+        msg_type, body, value = message.split('^')
+        if msg_type == "VU2":
+            data = VUData(body)
+            self.mqtt_client.publish_vu(data.get_as_mqtt())
         body_list = body.split('.')
         if body_list[0] == "var":
             if body_list[1] == "spiec":

@@ -13,6 +13,7 @@ class MixerMqttSender(MqttClient):
         self.update_topic = "config"
         self.report_endpoint_topic = "endpoint_report"
         self.report_status_topic = "status_report"
+        self.vu_topic = "vu"
 
     def _on_connect(self, client, userdata, flags, reason, prop) -> None:
         logger.debug("Mixer Mqtt Client connected")
@@ -24,6 +25,11 @@ class MixerMqttSender(MqttClient):
         self.client.publish(
             path.join(self.update_topic, topic),
             self._message_encode(msg)
+        )
+
+    def publish_vu(self, msg: str) -> None:
+        self.client.publish(
+            self.vu_topic, self._message_encode(msg)
         )
 
     def send_status(self, state: bool) -> None:
