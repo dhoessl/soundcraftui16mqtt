@@ -60,7 +60,7 @@ class MixerListener(MixerBase):
             for message in data:
                 if "SETD" in message:
                     # Send message using mqtt
-                    self._send_setd__message(message)
+                    self._send_setd_message(message)
                 elif message.startswith("VU2"):
                     body = message.split('^')[1]
                     vu2 = VUData()
