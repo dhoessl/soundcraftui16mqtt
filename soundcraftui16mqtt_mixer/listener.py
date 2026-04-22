@@ -4,7 +4,6 @@ from .vu import VUData
 
 from threading import Thread
 from loguru import logger
-from base64 import b64decode
 
 
 class MixerListener(MixerBase):
@@ -26,6 +25,8 @@ class MixerListener(MixerBase):
             logger.debug("Listener to Soundcraft ui16 connected")
             self.mqtt_client.send_endpoint(self.ip, self.port)
             self.mqtt_client.send_status(True)
+            # NOTE: Used to test vu2 message
+            # self.client.send(b"GET /vu_test HTTP1.1\n\n")
         else:
             self.logger.critical("Soundcraft Listener could not connect")
             raise RuntimeError("Soundcraft Listener could not connect")
@@ -36,7 +37,6 @@ class MixerListener(MixerBase):
 
     def _recv_thread(self) -> None:
         buffer = ""
-        # factor = 0.004167508166392142
         while not self.exit.is_set():
             # save new data to buffer
             try:
@@ -44,7 +44,7 @@ class MixerListener(MixerBase):
             except TimeoutError:
                 if self.exit.is_set():
                     continue
-                self.warning("Timeout on receiving - Mixer dead?")
+                logger.warning("Timeout on receiving - Mixer dead?")
                 self.mqtt_client.send_status(False)
                 self.exit.set()
                 continue
@@ -60,25 +60,21 @@ class MixerListener(MixerBase):
             for message in data:
                 if "SETD" in message:
                     # Send message using mqtt
-                    self._send_message(message)
+                    self._send_setd__message(message)
                 elif message.startswith("VU2"):
                     body = message.split('^')[1]
-                    numbers = ""
-                    for num in b64decode(body):
-                        numbers += f"{num} "
-                    logger.info(f"{numbers[:-1]}")
+                    vu2 = VUData()
+                    vu2.format_from_base64(body)
+                    self.mqtt_client.publish_vu(vu2.get_as_mqtt())
                 elif message.startswith("RTA"):
                     # Skip RTA for now since i can not decoded them
                     continue
                 else:
                     logger.debug(f"SKIP LISTENER MESSAGE: {message}")
 
-    def _send_message(self, message) -> None:
+    def _send_setd_message(self, message) -> None:
         logger.debug(message)
         msg_type, body, value = message.split('^')
-        if msg_type == "VU2":
-            data = VUData(body)
-            self.mqtt_client.publish_vu(data.get_as_mqtt())
         body_list = body.split('.')
         if body_list[0] == "var":
             if body_list[1] == "spiec":
@@ -114,7 +110,7 @@ class MixerListener(MixerBase):
                     "value": value
                 }
             )
-        elif body_list[0] == "m":
+        elif body_list[0] == "m" and body_list[1] == "mix":
             self.mqtt_client.publish(
                 "master",
                 {

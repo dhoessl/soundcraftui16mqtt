@@ -71,4 +71,4 @@ class VUData:
         self.data = loads(json)
 
     def get_as_mqtt(self) -> None:
-        dumps(self.data)
+        return dumps(self.data)

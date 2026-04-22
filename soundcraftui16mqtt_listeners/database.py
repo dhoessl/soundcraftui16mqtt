@@ -53,7 +53,7 @@ class DatabaseMqttListener(MqttClient):
             if path.split(topic)[1] == "channel":
                 self.channel_update(decoded_msg)
             elif path.split(topic)[1] == "channel_fx":
-                self.chjannel_fx_update(decoded_msg)
+                self.channel_fx_update(decoded_msg)
             elif path.split(topic)[1] == "fx":
                 self.fx_update(decoded_msg)
             elif path.split(topic)[1] == "master":

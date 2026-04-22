@@ -2,6 +2,7 @@ from socket import socket, AF_INET, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR
 from threading import Thread, Event, Lock
 from importlib import resources
 from loguru import logger
+from time import sleep
 
 
 class TestServer:
@@ -16,17 +17,25 @@ class TestServer:
         self.terminate_server = Event()
         self.clients = []
         self.clients_lock = Lock()
+        self.controll_thread = None
 
     def run(self) -> None:
+        self.controll_thread = Thread(
+            target=self._controll_thread,
+            args=()
+        )
+        self.controll_thread.start()
+
+    def _controll_thread(self) -> None:
         with socket(AF_INET, SOCK_STREAM) as sock:
             sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
             sock.bind((self.ip, self.port))
             sock.listen(self.max_connection)
-            logger.info("Server started")
+            logger.info("Test Server started")
             while not self.terminate_server.is_set():
                 conn, addr = sock.accept()
                 thread = Thread(
-                    target=self.thread,
+                    target=self._server_thread,
                     args=(conn, addr)
                 )
                 self.clients.append(thread)
@@ -40,11 +49,12 @@ class TestServer:
 
     def terminate(self) -> None:
         self.terminate_server.set()
+        self.controll_thread.join()
 
     def stop(self) -> None:
         self.terminate()
 
-    def thread(self, conn, addr) -> None:
+    def _server_thread(self, conn, addr) -> None:
         buffer = ""
         with conn:
             self.dump_config(conn)
@@ -60,8 +70,22 @@ class TestServer:
                         self.send_config_change(f"{message}\n")
                 if "GET /raw HTTP1.1" in data:
                     self.dump_config(conn)
+                if "GET /vu_test HTTP1.1" in data:
+                    self.dump_vu2(conn)
                 if "ALIVE" in data:
                     conn.sendall("OK\n".encode())
+
+    def dump_vu2(self, conn) -> None:
+        logger.info("Trying to send vutest data")
+        with open(
+            resources.files("soundcraftui16mqtt_mixer.data")
+            .joinpath("test_vu2.txt"),
+            "r"
+        ) as fp:
+            data = fp.read()
+        for line in data.split("\n"):
+            conn.sendall(f"{line}\n".encode())
+            sleep(0.08)
 
     def dump_config(self, conn) -> None:
         with open(
