@@ -16,8 +16,8 @@ CREATE TABLE IF NOT EXISTS channel_fx(
   id integer PRIMARY KEY AUTOINCREMENT,
   channel_id integer NOT NULL,
   fx_id integer NOT NULL,
-  mix REAL DEFAULT 0,
-  mute REAL DEFAULT 0
+  mute REAL DEFAULT 0,
+  value REAL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS fx(

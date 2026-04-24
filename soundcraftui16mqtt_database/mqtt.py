@@ -160,9 +160,6 @@ class DatabaseMqttController(MqttClient):
         )
 
     def channel_fx_update(self, msg: dict) -> None:
-        if msg["function"] == "value":
-            # TODO: fix me
-            return None
         self.db.execute(
             f"UPDATE channel_fx SET {msg['function']} = :value "
             "WHERE channel_id = :channel AND fx_id = :fx",
