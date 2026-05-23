@@ -4,11 +4,15 @@ from re import match
 
 from . import DBConnection as DBC
 from soundcraftui16mqtt_mqtt import MqttClient
+from soundcraftui16mqtt_mixer import (
+    power_format, percent_format, delay_time_format, room_time_format,
+    mix_format
+)
 
 
 class DatabaseMqttController(MqttClient):
-    """ Class to run a Mqtt Client setting new data in database and serving
-    Requests to this database values.
+    """ Class to run a Mqtt Client to set new data in database and serving
+    Requests of this database values.
     The moment a new value is set in the database it also gets send to clients
     listening for requests.
     """
@@ -104,6 +108,14 @@ class DatabaseMqttController(MqttClient):
         else:
             logger.debug(f"Unsolved: {topic} => {decoded_msg}")
 
+    def _format_freq(self, freq: float) -> str:
+        if freq >= 10000:
+            return f"{freq/1000:.1f}kHz"
+        elif freq >= 1000:
+            return f"{freq/1000:.2f}kHz"
+        else:
+            return f"{freq:.0f}Hz"
+
     def master_update(self, msg: str | float) -> None:
         self.db.execute(
             "UPDATE misc SET value = :value WHERE parameter = 'master'",
@@ -185,7 +197,10 @@ class DatabaseMqttController(MqttClient):
         )
         self.client.publish(
             path.join(self.database_update_topic, requester, "master"),
-            rows[0][0]
+            self._message_encode({
+                "value": rows[0][0],
+                "value_formated": f"{mix_format(rows[0][0]):.1f} dB"
+            })
         )
 
     def publish_bpm(self, requester: str) -> None:
@@ -202,13 +217,65 @@ class DatabaseMqttController(MqttClient):
             f"SELECT {msg['param']} FROM fx WHERE id = :fx",
             {"fx": msg["fx"]}
         )
+        if str(msg["fx"]) == "1" and msg["param"] == "par1":
+            value_formated = f"{delay_time_format(rows[0][0]):.0f}ms"
+        elif str(msg["fx"]) == "3" and msg["param"] == "par1":
+            value_formated = f"{room_time_format(rows[0][0]):.0f}ms"
+        elif (
+            (
+                str(msg["fx"]) == "0"
+                and (msg["param"] == "par2" or msg["param"] == "par3")
+            )
+            or (str(msg["fx"]) == "1" and msg["param"] == "par3")
+            or (str(msg["fx"]) == "2" and msg["param"] == "par2")
+            or (
+                str(msg["fx"]) == "3"
+                and (msg["param"] == "par2" or msg["param"] == "par3")
+            )
+        ):
+            value_formated = f"{percent_format(rows[0][0], 0, 100):.0f}%"
+        elif str(msg["fx"]) == "1" and msg["param"] == "par2":
+            value_formated = f"{percent_format(rows[0][0], 0, 200):.0f}%"
+        elif str(msg["fx"]) == "0" and msg["param"] == "par1":
+            value_formated = f"{power_format(rows[0][0], 300, 8000):.0f}ms"
+        elif (
+            str(msg["fx"]) == "0" and msg["param"] == "par4"
+            or str(msg["fx"]) == "2" and msg["param"] == "par3"
+            or str(msg["fx"]) == "3" and msg["param"] == "par4"
+        ):
+            value_formated = self._format_freq(
+                power_format(rows[0][0], 400, 22000)
+            )
+        elif (
+            str(msg["fx"]) == "0" and msg["param"] == "par5"
+            or str(msg["fx"]) == "3" and msg["param"] == "par5"
+        ):
+            value_formated = self._format_freq(
+                power_format(rows[0][0], 20, 5000)
+            )
+        elif str(msg["fx"]) == "1" and msg["param"] == "par4":
+            value_formated = self._format_freq(
+                power_format(rows[0][0], 20, 22000)
+            )
+        elif str(msg["fx"]) == "2" and msg["param"] == "par1":
+            value_formated = f"{percent_format(rows[0][0], -100, 100):.0f}c"
+        elif msg["param"] == "mix":
+            value_formated = f"{mix_format(rows[0][0]):.1f}"
+        elif msg["param"] == "mute":
+            value_formated = rows[0][0]
+        else:
+            logger.warning(
+                f"Could not format fx {msg['fx']} param {msg['param']}"
+            )
+            value_formated = rows[0][0]
         self.client.publish(
             path.join(self.database_update_topic, requester, "fx"),
             self._message_encode(
                 {
                     "fx": msg["fx"],
                     "param": msg["param"],
-                    "value": rows[0][0]
+                    "value": rows[0][0],
+                    "value_formated": value_formated
                 }
             )
         )
@@ -224,7 +291,8 @@ class DatabaseMqttController(MqttClient):
                 {
                     "channel": msg["channel"],
                     "param": msg["param"],
-                    "value": rows[0][0]
+                    "value": rows[0][0],
+                    "value_formated": f"{mix_format(rows[0][0]):.1f}dB"
                 }
             )
         )
@@ -242,7 +310,8 @@ class DatabaseMqttController(MqttClient):
                     "channel": msg["channel"],
                     "fx": msg["fx"],
                     "param": msg["param"],
-                    "value": rows[0][0]
+                    "value": rows[0][0],
+                    "value_formated": f"{mix_format(rows[0][0]):.1f}dB"
                 }
             )
         )
