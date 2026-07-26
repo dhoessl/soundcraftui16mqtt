@@ -29,11 +29,13 @@ class DatabaseMqttController(MqttClient):
         self.db = DBC()
         self.listen_topics = [
             "config", "database_request", "status_request", "status_report",
-            "endpoint_request", "endpoint_report"
+            "endpoint_request", "endpoint_report", "preset_request",
+            "preset_edit"
         ]
         self.database_update_topic = "database_update"
         self.status_update_topic = "status_update"
         self.endpoint_update_topic = "endpoint_update"
+        self.preset_update_topic = "preset_update"
 
     def _on_connect(self, client, userdata, flags, reason, prop) -> None:
         for topic in self.listen_topics:
@@ -105,6 +107,17 @@ class DatabaseMqttController(MqttClient):
             self.publish_endpoints(path.split(topic)[1])
         elif topic.startswith(self.listen_topics[5]):
             self.update_endpoints(decoded_msg)
+        elif topic.startswith(self.listen_topics[6]):
+            self.publish_preset(requester)
+        elif topic.startswith(self.listen_topics[7]):
+            if "action" in decoded_msg and decoded_msg["action"] == "create":
+                self.create_preset(decoded_msg)
+            elif "action" in decoded_msg and decoded_msg["action"] == "delete":
+                self.delete_preset(decoded_msg)
+            else:
+                logger.debug(
+                    f"Could not determine perset action... {decoded_msg}"
+                )
         else:
             logger.debug(f"Unsolved: {topic} => {decoded_msg}")
 
@@ -363,4 +376,103 @@ class DatabaseMqttController(MqttClient):
         self.client.publish(
             path.join(self.endpoint_update_topic, requester),
             self._message_encode(endpoints)
+        )
+
+    def create_preset(self, msg: dict) -> None:
+        for fx in msg["fx"]:
+            fx_data = msg["fx"][fx]
+            self.db.execute(
+                "INSERT INTO fx_preset(preset, fx_id, par1, par2, par3, par4, "
+                "par5, mute, mix) VALUES (:preset, :fx_id, :par1, :par2, "
+                ":par3, :par4, :par5, :par6, :mute, :mix)",
+                {
+                    "preset": msg["id"],
+                    "fx_id": fx,
+                    "par1": fx_data["par1"],
+                    "par2": fx_data["par2"],
+                    "par3": fx_data["par3"],
+                    "par4": fx_data["par4"],
+                    "par5": fx_data["par5"],
+                    "par6": fx_data["par6"] if "par6" in fx_data else 0,
+                    "mute": fx_data["mute"],
+                    "mix": fx_data["mix"]
+                },
+                True
+            )
+        for channel in msg["channel_fx"]:
+            for fx in msg["channel_fx"][channel]:
+                channel_fx = msg["channel_fx"][channel][fx]
+                self.db.execute(
+                    "INSERT INTO channel_fx_preset (preset, channel_id, "
+                    "fx_id, value, mute) VALUES (:preset, :channel_id, "
+                    ":fx_id, :value :mute)",
+                    {
+                        "preset": msg["id"],
+                        "channel_id": channel,
+                        "fx_id": fx,
+                        "value": channel_fx["value"],
+                        "mute": channel_fx["mute"]
+                    },
+                    True
+                )
+        self.publish_preset("all")
+
+    def delete_preset(self, msg: dict) -> None:
+        self.db.execute(
+            "DELETE FROM fx_preset WHERE preset = :preset",
+            {"preset": msg["id"]},
+            True
+        )
+        self.db.execute(
+            "DELETE FROM channel_fx_preset WHERE preset = :preset",
+            {"preset": msg["id"]},
+            True
+        )
+        self.publish_preset("all")
+
+    def _create_preset_skel(self) -> dict:
+        skel = {"fx": {}, "channel": {}}
+        for ch in range(12):
+            skel["channel"][ch] = {}
+            for fx in range(4):
+                skel["channel"][ch][fx] = {
+                    "value": None,
+                    "mute": None
+                }
+        return skel
+
+    def publish_preset(self, requester: str) -> None:
+        presets = {}
+        rows = self.db.execute(
+            "SELECT preset, fx_id, par1, par2, par3, par4, par5, par6, mute, "
+            "mix "
+            "FROM fx_preset"
+        )
+        for row in rows:
+            if row[0] not in presets:
+                presets[row[0]] = self._create_preset_skel()
+            presets[row[0]]["fx"][row[1]] = {
+                "par1": row[2],
+                "par2": row[3],
+                "par3": row[4],
+                "par4": row[5],
+                "par5": row[6],
+                "par6": row[7],
+                "mute": row[8],
+                "mix": row[9]
+            }
+        rows = self.db.execute(
+            "SELECT preset, channel_id, fx_id, value, mute "
+            "FROM channel_fx_preset"
+        )
+        for row in rows:
+            if row[0] not in presets:
+                presets[row[0]] = self._create_preset_skel()
+            presets[row[0]]["channel"][row[1]][row[2]] = {
+                "value": row[3],
+                "mute": row[4]
+            }
+        self.client.publish(
+            path.join(self.controller_update_topic, requester),
+            self._message_encode(presets)
         )

@@ -20,6 +20,7 @@ class MqttClient:
     def start(self) -> None:
         self.client.on_connect = self._on_connect
         self.client.on_message = self._on_message
+        self.client.on_disconnect = self._on_disconnect
         self.client.connect(self.host, self.port)
         logger.debug(f"Client {self.id} connected!")
         if self.runforever:
@@ -38,6 +39,13 @@ class MqttClient:
     def _on_message(self, client, userdata, msg) -> None:
         logger.debug("No on_message set. Default Action")
         logger.info(f"{msg.topic} => {msg.payload}")
+
+    def _on_disconnect(self, client, userdata, rc) -> None:
+        if rc != 0:
+            logger.critical(f"Mqtt Client {self.id} unexpected disconnect")
+        logger.info(
+            f"Mqtt client {self.id} disconnected! No _on_disconnect function."
+        )
 
     def _message_decoder(self, msg: str | dict) -> str | dict:
         # Tries to decode json formated message into dict

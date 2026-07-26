@@ -23,7 +23,10 @@ setup(
         ]
     },
     include_package_data=True,
-    install_requires=["loguru", "paho-mqtt", "scipy"],
+    install_requires=[
+        "loguru", "paho-mqtt", "scipy",
+        "akai_pro_py @ git+https://github.com/dhoessl/apc-mini-py"
+    ],
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
